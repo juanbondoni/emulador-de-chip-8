@@ -210,10 +210,10 @@ void i9XY0(chip8 *chip8, uint8_t X, uint8_t Y)
 //cargar la direccion NNN en el registro I
 void iANNN(chip8 *chip8, uint16_t NNN)
 {
-    if(NNN>MAX_MEMORIA)
+    if(NNN<MAX_MEMORIA)
         chip8->I=NNN;
     else
-        printf("direccion de memoria invalido");
+        printf("direccion de memoria invalido soy linea 216\n");
 } 
 //saltar a la direccion NNN + V0
 void iBNNN(chip8 *chip8, uint16_t NNN)
