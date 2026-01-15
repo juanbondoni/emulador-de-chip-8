@@ -3,16 +3,7 @@
 //Llamar a subrutina en la direccion NNN
 void oNNN(chip8 *chip8, uint16_t NNN)
 {
-    if(chip8->sp<=15){
-        chip8->sp++;
-        chip8->stack[chip8->sp]=chip8->pc;
-        chip8->pc=NNN;
-    }
-    else
-    {
-        printf("stack overflow\n");
-        exit(1);
-    }
+    //no se implementa ya que es igual a 2NNN
 }
 //limpiar la pantalla
 void ooEo(chip8 *chip8)
@@ -185,13 +176,13 @@ void i8XY7(chip8 *chip8, uint8_t X, uint8_t Y)
     else
         printf("registros inexistentes");
 }
-//guardar el valor de VF=VX y luego desplazar VX a la izquierda 1 bit | VX=VX<<1
+//guarda el valor del bit mas significativo de VX en VF y luego desplaza un bit a la izquierda
 void i8XYE(chip8 *chip8, uint8_t X)
 {
-        if (X<MAX_V && Y<MAX_V)
+    if (X<MAX_V)
     {
-        chip8->V[0xF] = (chip8->V[Y] >= chip8->V[X]) ? 1 : 0;
-        chip8->V[X] = chip8->V[Y] - chip8->V[X];
+        chip8->V[0xF] = (chip8->V[X] & 0x80)>>7; 
+        chip8->V[X] = chip8->V[X]<<1;
     }
     else
         printf("registros inexistentes");
@@ -290,7 +281,7 @@ void iEX9E(chip8 *chip8, uint8_t X)
     if(X<MAX_V)
     {
         uint8_t tecla=chip8->V[X];
-        if(chip8->V[tecla] == 1)
+        if(chip8->keypad[tecla] == 1)
         {
             chip8->pc+=2;
             if(chip8->pc > MAX_MEMORIA)
@@ -308,7 +299,7 @@ void iEXA1(chip8 *chip8, uint8_t X)
     if(X<MAX_V)
     {
         uint8_t tecla=chip8->V[X];
-        if(chip8->V[tecla] != 1)
+        if(chip8->keypad[tecla] != 1)
         {
             chip8->pc+=2;
             if(chip8->pc > MAX_MEMORIA)
@@ -322,7 +313,10 @@ void iEXA1(chip8 *chip8, uint8_t X)
 //cargar el valor del delay timer en VX
 void iFX07(chip8 *chip8, uint8_t X)
 {
-    //a implementar
+    if(X < MAX_V)
+        chip8->V[X] = chip8->delay_timer;
+    else
+        printf("registro inexistente");
 }
 //esperar a que se presione una tecla y guardarla en VX
 void iFX0A(chip8 *chip8, uint8_t X)
@@ -348,12 +342,18 @@ void iFX0A(chip8 *chip8, uint8_t X)
 //cargar el valor de VX en el delay timer
 void iFX15(chip8 *chip8, uint8_t X)
 {
-    //a implementar
+    if(X < MAX_V)
+        chip8->delay_timer = chip8->V[X];
+    else
+        printf("registro inexistente");
 }
 //cargar el valor de VX en el sound timer
 void iFX18(chip8 *chip8, uint8_t X)
 {
-    //a implementar
+    if(X < MAX_V)
+        chip8->sound_timer = chip8->V[X];
+    else
+        printf("registro inexistente");
 }
  //sumar VX al registro I
 void iFX1E(chip8 *chip8, uint8_t X)
@@ -366,7 +366,13 @@ void iFX1E(chip8 *chip8, uint8_t X)
 //cargar en I la direccion del sprite correspondiente al valor de VX
 void iFX29(chip8 *chip8, uint8_t X)
 {
-    //a implementar
+    if(X < MAX_V)
+    {
+        uint8_t digito = chip8->V[X] & 0x0F;  // Solo los dígitos 0-F son válidos
+        chip8->I = digito * 5;  // Cada sprite de fuente ocupa 5 bytes
+    }
+    else
+        printf("registro inexistente");
 }
 //almacenar el valor de VX en formato BCD en la memoria en las posiciones I, I+1, I+2
 void iFX33(chip8 *chip8, uint8_t X)
@@ -374,8 +380,8 @@ void iFX33(chip8 *chip8, uint8_t X)
     if(X<MAX_V)
     {
         chip8->memoria[chip8->I+0]=(uint8_t)(chip8->V[X] / 100);
-        chip8->memoria[chip8->I+1]=(uint8_t)((chip8->V[X] / 10)-10);
-        chip8->memoria[chip8->I+0]=(uint8_t)((chip8->V[X] % 100) % 10);
+        chip8->memoria[chip8->I+1]=(uint8_t)((chip8->V[X] / 10) %10);
+        chip8->memoria[chip8->I+0]=(uint8_t)(chip8->V[X] % 10);
     }
     else
         printf("registro inexistente");
