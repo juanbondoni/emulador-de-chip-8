@@ -1,47 +1,144 @@
 #include "operaciones.h"
-void cargarJuego();
+#include <SDL2/SDL.h>
 
-int main(){
+void cargarJuego(chip8 *chip8,char *filename);
+void dibujar_pantalla(chip8 *chip, SDL_Renderer *renderer);
+void emular_ciclo(chip8 *chip);
+
+int main(int argc, char *argv[]){
     
     chip8 Michip8;
+    SDL_Window *window = NULL;
+    SDL_Renderer *renderer = NULL;
     srand(time(NULL));
     int ciclos_por_frame = 10;
 
-    memset(&Michip8,0,sizeof(Michip8));
+    if(argc != 2) {
+        printf("error muchos argumentos o faltante\n");
+        return 1;
+    }
 
+    memset(&Michip8,0,sizeof(Michip8));
     Michip8.pc=0x200;
 
-    cargarJuego();//a implementar
+    cargarJuego(&Michip8, argv[1]);
 
+    // Inicializar SDL
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        printf("Error inicializando SDL: %s\n", SDL_GetError());
+        return 1;
+    }
 
+    // Crear ventana (64x32 pixels, escalado 10x = 640x320)
+    window = SDL_CreateWindow(
+        "CHIP-8 Emulator",
+        SDL_WINDOWPOS_CENTERED,
+        SDL_WINDOWPOS_CENTERED,
+        640, 320,
+        SDL_WINDOW_SHOWN
+    );
+
+    if (!window) {
+        printf("Error creando ventana: %s\n", SDL_GetError());
+        SDL_Quit();
+        return 1;
+    }
+
+    // Crear renderer
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    
+    if (!renderer) {
+        printf("Error creando renderer: %s\n", SDL_GetError());
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return 1;
+    }
 
     while (1)
     {
        for (int i = 0; i < ciclos_por_frame; i++)
             emular_ciclo(&Michip8);
 
-        // C. Actualizar Timers (Solo una vez por frame, a 60Hz)
         if (Michip8.delay_timer > 0) 
             Michip8.delay_timer--;
         
         if (Michip8.sound_timer > 0) {
-            // reproducir_beep();
             Michip8.sound_timer--;
         }
 
-        // D. Dibujar
-        // Si usamos iDXYN, el array 'display' ya tiene los pixels.
-        // dibujar_pantalla(mi_chip.display);
+       dibujar_pantalla(&Michip8, renderer); // Ahora pasas el puntero
 
-        // E. Control de velocidad (Delay para mantener 60 FPS)
-        // Esto es rudimentario. Lo ideal es contar delta-time.
-        usleep(16666); // ~16ms = 60
-            }
+        usleep(16666);
+    }
+
+    // Limpieza (aunque nunca llegues aquí con while(1))
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
     
+    return 0;
 }
 
+// Supongamos que ESCALA = 10 (cada pixel de Chip-8 son 10x10 reales)
 
-#include "operaciones.h"
+void dibujar_pantalla(chip8 *chip, SDL_Renderer *renderer)
+{
+    // 1. Limpiar pantalla (Pintar todo de negro)
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255); // Negro
+    SDL_RenderClear(renderer);
+
+    // 2. Configurar color de dibujo a Blanco
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // Blanco
+
+    // 3. Recorrer tu VRAM
+    for (int y = 0; y < 32; y++)
+    {
+        for (int x = 0; x < 64; x++)
+        {
+            // Si tu emulador dice que aquí hay un pixel prendido...
+            if (chip->display[(y * 64) + x] == 1)
+            {
+                // ...creamos un cuadrado grande para que se vea
+                SDL_Rect rect;
+                rect.x = x * 10; // Posición X magnificada
+                rect.y = y * 10; // Posición Y magnificada
+                rect.w = 10;     // Ancho del "pixel"
+                rect.h = 10;     // Alto del "pixel"
+
+                // Le decimos a la tarjeta gráfica que dibuje ese cuadrado
+                SDL_RenderFillRect(renderer, &rect);
+            }
+        }
+    }
+
+    // 4. "Presentar" (Mostrar lo que dibujamos en la ventana real)
+    SDL_RenderPresent(renderer);
+}
+
+void cargarJuego(chip8 *chip8,char *filename)
+{
+    FILE *arch=fopen(filename,"rb");
+    long tamaño;
+    if(arch != NULL)
+    {
+        fseek(arch,0,SEEK_END);
+        tamaño=ftell(arch);
+        fseek(arch,0,SEEK_SET);
+
+        if(tamaño<MAX_MEMORIA-0x200)
+            fread(&chip8->memoria[0x200],1,tamaño,arch);
+        else
+        {
+            printf("el juego es demasiado pesado para esta consola solo se pertmiten archivos de %d bytes",MAX_MEMORIA-0x200);
+            exit(1);
+        }
+    }
+    else
+    {
+        printf("Error al abrir el archivo %s",filename);
+        exit(1);
+    }
+}
 
 void emular_ciclo(chip8 *chip)
 {

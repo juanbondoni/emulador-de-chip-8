@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
+#include <SDL2/SDL.h>
+#include <time.h>
+
 #define MAX_MEMORIA 4096
 #define MAX_V 16
 typedef struct  chip8

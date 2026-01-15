@@ -1,5 +1,6 @@
 #include "operaciones.h"
 
+
 //Llamar a subrutina en la direccion NNN
 void oNNN(chip8 *chip8, uint16_t NNN)
 {
